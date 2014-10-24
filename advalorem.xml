@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="component" version="3.3.3" method="upgrade">
+
+	<name>Ad Valorem</name>
+	<!-- Следующие элементы необязательны -->
+	<creationDate>Октябрь 2014</creationDate>
+	<author>Кащук Юрий</author>
+	<authorEmail>yuri.kashchuk@gmail.com</authorEmail>
+	<authorUrl></authorUrl>
+	<copyright></copyright>
+	<license></license>
+	<!--  Версия записывается в таблицу компонентов -->
+	<version>0.0.2</version>
+	<!-- Описание необязательно -->
+	<description>Каталог специалистов</description>
+
+	<!-- Запускается при обновлении -->
+	<update>
+		<schemas>
+			<schemapath type="mysql">sql/updates/mysql</schemapath>
+		</schemas>
+	</update>
+
+	<!-- Раздел основных файлов сайта -->
+	<!-- Обратите внимание на значение аттрибута folder: Этот аттрибут описывает папку нашего пакета-установщика из которой должны копироваться файлы.
+	Поэтому указанные в этом разделе файлы будут скопированы из папки /site/ нашего пакета-установщика в соответствующую папку установки. -->
+	<files folder="site">
+		<filename>index.html</filename>
+		<filename>controller.php</filename>
+		<filename>advalorem.php</filename>
+		<folder>models</folder>
+		<folder>views</folder>
+	</files>
+
+	<!-- Администрирование -->
+	<administration>
+		<!-- Раздел Меню -->
+		<menu>Ad Valorem</menu>
+		<!-- Раздел основных файлов администрирования  -->
+		<!-- Обратите внимание на значение аттрибута folder: Этот аттрибут описывает папку нашего пакета-установщика из которой должны копироваться файлы. 
+		Поэтому указанные в этом разделе файлы будут скопированы из папки /admin/ нашего пакета-установщика в соответствующую папку установки. -->
+		<files folder="admin">
+			<filename>index.html</filename>
+			<filename>advalorem.php</filename>
+			<folder>sql</folder>
+		</files>
+	</administration>
+
+</extension>
