@@ -1,8 +1,24 @@
 <?php
-// Запрет прямого доступа.
-defined('_JEXEC') or die;
+  // Запрет прямого доступа.
+  defined('_JEXEC') or die;
 ?>
 
-<h2><?php echo $this->item; ?></h2>
+<!-- Шаблон для вывода компонента -->
+  <div class="row">
 
-<?php echo $this->content; ?>
+      <!-- Вывод каталога специалистов-->
+      <div class="col-md-9">
+            <!-- Вывод заголовка-->
+            <h2><?php echo $this->item; ?></h2>
+            <!-- Вывод контента-->
+            <?php echo $this->contentCatalog; ?>
+      </div>
+
+      <!-- Вывод блока с параметрами поиска-->
+      <div class="col-md-3">
+            <!-- Вывод заголовка-->
+            <h2>Тэги</h2>
+            <!-- Вывод контента-->
+            <?php echo $this->contentTags; ?>
+      </div>
+  </div>

@@ -8,6 +8,6 @@ jimport('joomla.application.component.controller');
 // Контроллер компонента
 class AdValoremController extends JControllerLegacy
 {
-
+  // Отображаем метод display модели по умолчанию
 }
 ?>

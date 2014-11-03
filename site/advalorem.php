@@ -21,6 +21,7 @@ $controller = JControllerLegacy::getInstance('AdValorem');
 
 // Исполняем задачу task из Запроса.
 $input = JFactory::getApplication()->input;
+
 $controller->execute($input->getCmd('task', 'display'));
 
 // Перенаправляем, если перенаправление установлено в контроллере.

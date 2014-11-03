@@ -5,9 +5,9 @@ defined('_JEXEC') or die;
 // Подключаем библиотеку modelitem Joomla.
 jimport('joomla.application.component.modelitem');
 
-/**
- * Модель сообщения компонента HelloWorld.
- */
+// Модель по умолчанию. Используется для выборки данных при формировании контента
+// Методы работы с сущностями располагаются в соответствующих моделях.
+
 class AdValoremModelAdValorem extends JModelItem
 {
 	// Получаем сообщение.
@@ -16,19 +16,17 @@ class AdValoremModelAdValorem extends JModelItem
 	{
 		if (!isset($this->_item))
 		{
-			$this->_item = 'Список тэгов';
+			$this->_item = 'Список специалистов';
 		}
 
 		return $this->_item;
 	}
 
     // Получаем список тэгов из БД
+
     public function getTags()
 	{
-        // Get a db connection.
         $db = JFactory::getDbo();
-
-        // Create a new query object.
         $query = $db->getQuery(true);
 
         // Select
@@ -45,6 +43,30 @@ class AdValoremModelAdValorem extends JModelItem
 
 		return $results;
 	}
+
+    // Получаем данные о специалистах для вывода
+
+    public function getSpecCatalog()
+    {
+        $db = JFactory::getDbo();
+
+        $query = $db->getQuery(true);
+
+        /*  Выбираем данные для вывода мини-карточек в каталоге.
+            Отбираем только специалистов, имя и отчество объединяем, дату выводим в нормальном формате
+        */
+        $query
+            ->select($db->quoteName(array('sirname', 'name', 'patronymic', 'gender', 'phone', 'city')))
+            ->from($db->quoteName('#__ad_client'))
+            ->where($db->quoteName('profile').' LIKE '.'\'O\'')
+            ->order('sirname ASC'.' '.'LIMIT 0, 3');
+
+        $db->setQuery($query);
+
+        $results = $db->loadObjectList();
+
+		return $results;
+    }
 
 }
 ?>
