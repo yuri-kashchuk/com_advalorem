@@ -10,9 +10,30 @@ jimport('joomla.application.component.modelitem');
 
 class AdValoremModelAdValorem extends JModelItem
 {
+    // Контейнер для проверенных полей запроса
+    public $request;
+
+    // Ссылки на страницы компонента
+
+    // ССылка на форму редактирования специалиста
+    public function getEditLink()
+    {
+        return JRoute::_( '&task=edit&uid='.JRequest::getInt('uid') );
+    }
+
+    // ССылка на форму карточки специалиста
+    public function getViewLink()
+    {
+        return JRoute::_( '&task=view&uid='.JRequest::getInt('uid') );
+    }
+
+    // ССылка на результаты поиска
+    public function getSearchLink()
+    {
+        return JRoute::_( '&task=search' ); // TODO сделать сохранение и восстановление результатов запроса
+    }
 
     // Получаем список тэгов из БД
-
     public function getTags()
 	{
         $db = JFactory::getDbo();
@@ -36,7 +57,7 @@ class AdValoremModelAdValorem extends JModelItem
     // Пормируем перечень полей для запроса карточки оператора
     public function getOperatorMiniCardFields()
     {
-        return array('id', 'sirname', 'name', 'patronymic', 'gender', 'phone', 'city', 'price', 'description');
+        return array('id', 'sirname', 'name', 'patronymic', 'gender', 'birth_date', 'email', 'phone', 'city', 'price', 'description');
     }
 
     // Получаем данные для мини-карточки оператора
@@ -134,23 +155,8 @@ class AdValoremModelAdValorem extends JModelItem
 
 
     // Изменение данных оператора
-    public function operatorUpdate()
+    public function operatorUpdate($object = null)
     {
-      $object = new stdClass();
-
-      // Значения полей
-      $object->id = JRequest::getInt('uid');
-      $object->sirname = '';
-      $object->name = '';
-      $object->patronymic = '';
-      $object->gender = '';
-      $object->birth_date = '';
-
-      $object->CITY = '';
-      $object->PRICE = '';
-      $object->DESCRIPTION = '';
-
-
       // Обновляем запись
       $result = JFactory::getDbo()->updateObject('#__ad_client', $object, 'id');
 
