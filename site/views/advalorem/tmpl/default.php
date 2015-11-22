@@ -1,44 +1,65 @@
 <?php
   // Запрет прямого доступа.
   defined('_JEXEC') or die;
+
+  $model = $this->getModel();
+
 ?>
 
-<!-- Шаблон по умолчанию для вывода компонента. -->
-  <div class="row">
+<!-- Шаблон для вывода главной страницы компонента. -->
+  <section class="">
 
-          <div class="col-md-8">
-              <h3><?= JText::_( 'AD_HEAD_CATALOG' ); ?></h3>
-              <hr>
-              <!-- Вывод категорий быстрого поиска-->
-              <?php echo $this->viewSearchCategories(); ?>
-          </div>
+    <div class="container">
+        <h1 class="page-header text-uppercased">Найти остеопата</h1>
 
-          <div class="col-md-4">
-              <h3><?= JText::_( 'AD_HEAD_SEARCH' ); ?></h3>
-              <hr>
-              <!-- Вывод блока с параметрами поиска-->
-              <?php echo $this->viewSearch(); ?>
-          </div>
+        <h3>Вы можете найти остеопата <a href="<?= $model->getCitiesLink(); ?>">в вашем городе</a> или по фамилии.</h3>
 
-  </div>
+        <p>
+          <a href="<?= JRoute::_( '&task=search' ); ?>" class="btn btn-primary">
+          Искать <span class="glyphicon glyphicon-chevron-right"></span>
+          </a>
+        </p>
 
-  <div class="row">
+        <p>Вы также можете подобрать специалиста по стоимости сеанса, образованию, стажу работы, полу и другим параметрам.</p>
 
-      <!-- Вывод карточки специалиста ПРОМО -->
-      <div class="col-md-6">
-            <!-- Вывод заголовка-->
-            <h3><?= JText::_( 'AD_HEAD_PROMO' ); ?></h3>
-            <!-- Вывод мини карточки -->
-            <?php echo $this->viewOperatorsPromo(null, '3-9'); ?>
-      </div>
+        <p><h4>Сейчас на сайте зарегистрировано 000 остеопатов.</h4></p>
 
-      <!-- Вывод карточки специалиста СЛУЧАЙНО -->
-      <div class="col-md-6">
-            <!-- Вывод заголовка-->
-            <h3><?= JText::_( 'AD_HEAD_RANDOM' ); ?></h3>
-            <!-- Вывод мини карточки -->
-            <?php echo $this->viewOperatorsRandom(null, '3-9'); ?>
+        Если вы попали сюда случайно или просто не очень понимаете кто такие <a href="#osteopaty">остеопаты</a> и что они делают,<br>
+        то можете почитать об этом <a href="#osteopaty">тут</a>.
 
-      </div>
+    </div>
 
-  </div>
+  </section>
+
+  <hr>
+
+  <section class="">
+
+    <div class="container">
+    <h1 class="page-header text-uppercased">О проекте</h1>
+
+    </div>
+
+  </section>
+
+  <hr>
+
+  <section class="" id="osteopaty">
+
+    <div class="container">
+    <h1 class="page-header text-uppercased">Об стеопатии</h1>
+
+    </div>
+
+  </section>
+
+  <hr>
+
+  <section class="">
+
+    <div class="container">
+    <h1 class="page-header text-uppercased">Обо мне</h1>
+
+    </div>
+
+  </section>
