@@ -7,9 +7,20 @@
 
 ?>
 
+<?php
+    // Устанавливаем заголовок для страницы
+        $operator = $model->getOperatorMiniCardByID();
+        $title = $operator->sirname.' '.$operator->name;
+
+        $document =& JFactory::getDocument();
+        $document->setTitle($title);
+?>
+
+
 <!-- Шаблон для вывода карточки оператора -->
 <div class="container">
 
+    <!-- Вывод блока с управляющими кнопками -->
     <div class="row">
 
         <div class="col-md-6">
@@ -18,6 +29,8 @@
               <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
               <?= JText::_( 'AD_BACK_TO_SEARCH' ); ?>
             </a>
+
+            <a class="btn btn-default" href="<?= $this->get('ViewLink') ?>#comments"><?= JText::_( 'AD_HEAD_COMMENTS' ); ?></a>
 
         </div>
         <div class="col-md-6">
@@ -47,6 +60,7 @@
 
     <hr>
 
+    <!-- Вывод блока с мини-карточкой и контактами -->
     <div class="row">
 
       <div class="col-md-6">
@@ -56,7 +70,6 @@
 
       </div>
 
-      <!-- Вывод блока с ... -->
       <div class="col-md-6">
 
         <h3><?= JText::_( 'AD_HEAD_CONTACTS' ); ?></h3>
@@ -67,6 +80,7 @@
 
     </div>
 
+    <!-- Вывод блока с общей инфо и образованием -->
     <div class="row">
 
       <div class="col-md-6">
@@ -77,7 +91,6 @@
 
       </div>
 
-      <!-- Вывод блока с ... -->
       <div class="col-md-6">
 
         <h3><?= JText::_( 'AD_HEAD_EDUCATION' ); ?></h3>
@@ -88,23 +101,16 @@
 
     </div>
 
+    <!-- Вывод блока с отзывами -->
     <div class="row">
 
-      <div class="col-md-6">
+      <div class="col-md-12">
 
         <h3 id="comments"><?= JText::_( 'AD_HEAD_COMMENTS' ); ?>
-        <a class="btn btn-primary pull-right" role="button" data-toggle="collapse" href="#comment" aria-expanded="false" aria-controls="comment">
-        <?= JText::_( 'AD_COMMENT' ); ?>
-        </a>
+          <a class="btn btn-default" role="button" data-toggle="collapse" href="#comment" aria-expanded="false" aria-controls="comment">
+          <?= JText::_( 'AD_COMMENT' ); ?>
+          </a>
         </h3>
-
-      </div>
-
-      <div class="col-md-6">
-
-        <a class="btn btn-primary pull-right" role="button" data-toggle="collapse" href="#comment" aria-expanded="false" aria-controls="comment">
-        <?= JText::_( 'AD_COMMENT' ); ?>
-        </a>
 
       </div>
 
@@ -114,7 +120,7 @@
 
       <div class="col-md-12">
 
-        <!--Показываем форму добавления комментария - потом спрячу под ссылочку-->
+        <!-- Показываем форму добавления комментария под ссылочкой -->
 
         <?php echo $this->viewOperatorCommentAdd(); ?>
 

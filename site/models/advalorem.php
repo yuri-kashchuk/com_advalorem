@@ -37,11 +37,12 @@ class AdValoremModelAdValorem extends JModelItem
     }
 
     // ССылка на форму карточки специалиста
-    public function getViewLink()
+    public function getViewLink($uid = null)
     {
         $session = &JFactory::getSession();
 
-        $uid = JRequest::getInt('uid');
+        # Если uid передан в явном виде - используем его, если нет - то из URL, если нет - из сессии
+        if (!$uid) { $uid = JRequest::getInt('uid'); }
         if (!$uid) { $uid = $session->get('uid'); }
 
         return JRoute::_( '&task=view&uid='.$uid );
@@ -114,12 +115,12 @@ class AdValoremModelAdValorem extends JModelItem
 		return $uid;
     }
 
-    // Пормируем перечень полей для запроса карточки оператора
+    // Формируем перечень полей для запроса карточки оператора
     public function getOperatorMiniCardFields()
     {
       $db = JFactory::getDbo();
 
-      $fields = array('c.id', 'c.sirname', 'c.name', 'c.patronymic', 'c.gender', 'c.email', 'c.phone',
+      $fields = array('c.id', 'c.juser_id', 'c.sirname', 'c.name', 'c.patronymic', 'c.gender', 'c.email', 'c.phone',
                         'c.price', 'c.description', 'c.desc_full', 'c.desc_consult', 'c.photo',
                         'c.exp', 'a.country', 'a.region', 'a.city', 'a.address', 'a.gps');
       $fields[] = 'education';
@@ -133,6 +134,26 @@ class AdValoremModelAdValorem extends JModelItem
       $fields[] = 'DATE_FORMAT( '.$db->quoteName('c.exp').', \'%d.%m.%Y\') exp';
 
       return $fields;
+    }
+
+    // Базовый запрос для поиска
+    function getOperatorMiniCardsQuery()
+    {
+
+        // Подключение к БД
+        $db = JFactory::getDbo();
+
+        $query = $db->getQuery(true);
+
+        $query
+            ->select( $this->getOperatorMiniCardFields() )
+            ->from( $db->quoteName('#__ad_client', 'c'))
+            ->join('LEFT', $db->quoteName('#__ad_address', 'a') . ' ON (' . $db->quoteName('c.id') . ' = ' . $db->quoteName('a.client') . ')')
+            ->where( $db->quoteName('c.profile').' = \''.JText::_( 'AD_OPERATOR' ).'\'' )
+            ->where($db->quoteName('c.blocked').' = 0');
+
+        return $query;
+
     }
 
     // Получаем данные для мини-карточки оператора на основании данных поиска
@@ -154,24 +175,29 @@ class AdValoremModelAdValorem extends JModelItem
         // Подключение к БД
         $db = JFactory::getDbo();
 
-        $query = $db->getQuery(true);
+        //$query = $db->getQuery(true);
 
         /*  Выбираем данные для вывода мини-карточек в каталоге.
             Отбираем только специалистов
         */
 
         // Если в параметрах передана категория поиска, то ищем по категрии
-        if ( $this->category == 'random' ) { $results = $this->getOperatorMiniCardsRandom(); return $results; }
+        //if ( $this->category == 'random' ) { $results = $this->getOperatorMiniCardsRandom(); return $results; }
+
+        $query = $this->getOperatorMiniCardsQuery();
+
 
         // Если категории не передано, то ищем по параметрам
-        $query
+        /*$query
             ->select( $this->getOperatorMiniCardFields() )
             ->from( $db->quoteName('#__ad_client', 'c'))
             ->join('LEFT', $db->quoteName('#__ad_address', 'a') . ' ON (' . $db->quoteName('c.id') . ' = ' . $db->quoteName('a.client') . ')')
             ->where( $db->quoteName('c.profile').' = \''.JText::_( 'AD_OPERATOR' ).'\'' )
             ->where($db->quoteName('c.blocked').' = 0');
+        */
 
         // Отбор по параметрам поиска:
+
         if ( $this->sirname ) {
           $query
               ->where($db->quoteName('c.sirname').' like \''.$this->sirname.'%\'');
@@ -197,6 +223,49 @@ class AdValoremModelAdValorem extends JModelItem
           # Если выбрано "Не важно" - не добавляем фильтр по цене
 
         }
+
+        // Сортировка
+        $sort = JRequest::getString('sort', 'c.completeness desc, c.price desc, c.sirname');
+
+        $query
+            ->order( $sort );
+
+        // Выполняем запрос
+        $db->setQuery($query, $this->limitStart, $this->limit);
+
+        $results = $db->loadObjectList();
+
+        // Считаем общее кол-во строк для паджинации
+        $this->totalRows = $this->_getListCount($query);
+
+		return $results;
+    }
+
+    // Получаем данные для мини-карточки оператора по фамилии
+    public function getOperatorMiniCardsSirname()
+    {
+        // Данные из запроса
+        $this->limitStart = JRequest::getInt('limitstart', 0);
+        $this->limit = JRequest::getInt('limit', JText::_( 'AD_PAGE_LIMIT' ));
+
+        // Подключение к БД
+        $db = JFactory::getDbo();
+
+        $query = $db->getQuery(true);
+
+        /*  Выбираем данные для вывода мини-карточек в каталоге.
+            Отбираем только специалистов
+        */
+
+        $query
+            ->select( $this->getOperatorMiniCardFields() )
+            ->from( $db->quoteName('#__ad_client', 'c'))
+            ->join('LEFT', $db->quoteName('#__ad_address', 'a') . ' ON (' . $db->quoteName('c.id') . ' = ' . $db->quoteName('a.client') . ')')
+            ->where( $db->quoteName('c.profile').' = \''.JText::_( 'AD_OPERATOR' ).'\'' )
+            ->where($db->quoteName('c.blocked').' = 0');
+
+          $query
+              ->where($db->quoteName('c.sirname').' like \''.$this->sirname.'%\'');
 
         // Сортировка
         $sort = JRequest::getString('sort', 'c.completeness desc, c.price desc, c.sirname');
@@ -293,7 +362,7 @@ class AdValoremModelAdValorem extends JModelItem
     }
 
 
-    // Получение списка похожих на заданного специалистов по Ф,И
+    // Получение списка похожих специалистов по Ф,И для блокировки
     public function getOperatorSimilars($uid = null)
     {
         $session = &JFactory::getSession();
@@ -320,8 +389,8 @@ class AdValoremModelAdValorem extends JModelItem
             ->join('LEFT', $db->quoteName('#__ad_address', 'a') . ' ON (' . $db->quoteName('c.id') . ' = ' . $db->quoteName('a.client') . ')')
             ->where('UPPER('.$db->quoteName('c.sirname').') = UPPER(\''.$current->sirname.'\')')
             ->where('UPPER('.$db->quoteName('c.name').') = UPPER(\''.$current->name.'\')')
-            ->where($db->quoteName('c.juser_id').' = 0')
-            ->where($db->quoteName('c.blocked').' = 0')
+            ->where($db->quoteName('c.juser_id').' = 0') # Еще не ассоциирован с пользователем
+            ->where($db->quoteName('c.blocked').' = 0')  # Еще не заблокирован
             ->where($db->quoteName('c.id').' <> '.$uid)
             ;
 
@@ -534,41 +603,6 @@ class AdValoremModelAdValorem extends JModelItem
       return $photo_name;
     }
 
-    /* Блок методов для работы с комментариями*/
-
-    // Добавление нового комментария
-    public function commentInsert( $object )
-    {
-        $result = JFactory::getDbo()->insertObject('#__ad_comments', $object);
-
-        return $result;
-    }
-
-    // Получение списка комментариев по оператору
-    public function commentsGet( $uid = null )
-    {
-        $session = &JFactory::getSession();
-
-        // Если UID не передан - пытаемся его получить из контекста
-        if (!$uid) { $uid = JRequest::getInt('uid'); }
-        if (!$uid) { $uid = $session->get('uid'); }
-
-        $db = JFactory::getDbo();
-
-        $query = $db->getQuery(true);
-
-        $query
-            ->select('id, uid, uid_from, name_from, commtype, text, DATE_FORMAT( '.$db->quoteName('date').', \'%d.%m.%Y\') date, status')
-            ->from($db->quoteName('#__ad_comments'))
-            ->where($db->quoteName('uid').' = '.$uid )
-            ->order($db->quoteName('id').' desc');
-
-        $db->setQuery($query);
-
-        $results = $db->loadObjectList();
-
-		return $results;
-    }
 
     // Обрезка изображения. Взято отсюда: http://www.php5.ru/articles/image
     public function img_resize($src, $dest, $width, $height, $rgb=0xFFFFFF, $quality=100)
@@ -663,6 +697,48 @@ class AdValoremModelAdValorem extends JModelItem
         // По умолчанию редактировать нельзя.
         return false;
     }
+
+
+    /*
+        Блок методов для работы с комментариями
+    */
+
+    // Добавление нового комментария
+    public function commentInsert( $object )
+    {
+        $result = JFactory::getDbo()->insertObject('#__ad_comments', $object);
+
+        return $result;
+    }
+
+    // Получение списка комментариев по оператору
+    public function commentsGet( $uid = null )
+    {
+        $session = &JFactory::getSession();
+
+        // Если UID не передан - пытаемся его получить из контекста
+        if (!$uid) { $uid = JRequest::getInt('uid'); }
+        if (!$uid) { $uid = $session->get('uid'); }
+
+        $db = JFactory::getDbo();
+
+        $query = $db->getQuery(true);
+
+        $query
+            ->select('id, uid, uid_from, name_from, commtype, text, DATE_FORMAT( '.$db->quoteName('date').', \'%d.%m.%Y\') date, status')
+            ->from($db->quoteName('#__ad_comments'))
+            ->where($db->quoteName('uid').' = '.$uid )
+            ->order($db->quoteName('id').' desc');
+
+        $db->setQuery($query);
+
+        $results = $db->loadObjectList();
+
+		return $results;
+    }
+
+    /* -------- ---------------------------------------------------------- */
+
 
     /*
       Пакет методов работы с адресом
@@ -778,6 +854,27 @@ class AdValoremModelAdValorem extends JModelItem
 
 		return $results;
     }
+
+    /*
+        Блок методов работы с историей
+    */
+
+    /*
+        clientCreate - создание клиента (оператора или пациента)
+        clientBlock - блокировка клиента
+
+
+    */
+
+    // Добавление новой записи в историю
+    public function historyInsert( $object )
+    {
+        $result = JFactory::getDbo()->insertObject('#__ad_history', $object);
+
+        return $result;
+    }
+
+    /* ------------------------------------- */
 
     // Генератор случайных чисел. К проекту не имеет отношения.
     /*

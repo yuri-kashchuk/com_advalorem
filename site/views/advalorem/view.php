@@ -106,6 +106,12 @@ class AdValoremViewAdValorem extends JViewLegacy
           <div class="row">
             <div class="col-md-12">
 
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h3 class="panel-title"><?= JText::_( 'AD_HEAD_SEARCH' ) ?></h3>
+              </div>
+              <div class="panel-body">
+
             <script>
             function changeLink()
             {
@@ -166,6 +172,7 @@ class AdValoremViewAdValorem extends JViewLegacy
 
 
                 <!-- Категория специалистов  -->
+                <!-- Пока только остеопаты, поэтому прячу
 
                 <div class="form-group">
 
@@ -176,6 +183,7 @@ class AdValoremViewAdValorem extends JViewLegacy
                     </select>
 
                 </div>
+                -->
 
                 <!-- Города  -->
 
@@ -313,6 +321,10 @@ class AdValoremViewAdValorem extends JViewLegacy
               </form>
 
             </div>
+            <!-- Закрываю панель  -->
+              </div>
+            </div>
+            <!-- Закрываю основной div  -->
           </div>
         </div>
         <?
@@ -465,10 +477,13 @@ class AdValoremViewAdValorem extends JViewLegacy
 
 
     // Ссылка на редактирование оператора
+
     public function linkOperatorUpdate()
     {
-        return JRoute::_('index.php?option=com_advalorem&task=edit');
+      #  return JRoute::_('index.php?option=com_advalorem&task=edit');
+      // Если нигде не вылезет - снести
     }
+
 
     // Вывод паджинатора
     public function viewPagination($totalRows, $limitStart, $limit)
@@ -536,7 +551,8 @@ class AdValoremViewAdValorem extends JViewLegacy
 
 
     // Вывод каталога специалистов по результатам поиска
-    public function viewOperatorsList($category = 'search', $format = '2-6-4')
+    public function viewOperatorsList($category = 'search', $format = '2-10-6-4')
+    # Поддерживаются форматы: '3-9' (для 1/2 страницы, '2-6-4' для 3/4 страницы )
     {
         $model = $this->getModel();
 
@@ -559,7 +575,8 @@ class AdValoremViewAdValorem extends JViewLegacy
         return null;
     }
 
-    // Вывод каталога специалистов по результатам поиска
+    // Вывод списка похожих на пользователя специалистов для выбора дальнейших дейтствий
+    # Описание логики реакции - в контроллере
     public function viewOperatorSimilarsList()
     {
         $model = $this->getModel();
@@ -570,18 +587,22 @@ class AdValoremViewAdValorem extends JViewLegacy
         // Если ничего не нашли - ничего не делаем
         if (!$data) { return null; }
 
-        // Выводим сообщение
-        #JFactory::getApplication()->enqueueMessage( JText::_( 'AD_SIMILAR_FOUND' ) );
-
-        // Выводим табличку с операторами
+        // Выводим сообщения с операторами
           foreach ($data as $similar)
           {
 
-          // Выводим строку таблицы
+          // Выводим сообщение о похожем операторе
           ?>
-          <div class="alert alert-warning row" role="alert">
-              <div class="col-md-1"><a href="<?= $model->getSignLink($similar->id)  ?>">Удалить</a></div>
-              <div class="col-md-11"><?= $similar->sirname.' '.$similar->name.' '.$similar->patronymic ?></div>
+          <div class="alert alert-warning" role="alert">
+
+          <? echo $this->viewOperatorMiniCard($similar, '2-6-4'); ?>
+
+                <a class="btn btn-primary" href="<?= $model->getSignLink($similar->id)  ?>"><?= JText::_('AD_SIGN') ?></a>
+                <br> asdasd
+                <br>
+                <a class="btn btn-primary" href="<?= JRoute::_('?task=view&uid='.$similar->id)  ?>"><?= JText::_('AD_BLOCK') ?></a>
+                <br> dsfsdfsdf
+
           </div>
           <?
           }
@@ -629,10 +650,15 @@ class AdValoremViewAdValorem extends JViewLegacy
 
       if (!$data) { $data = $model->getOperatorMiniCardByID(); }
 
+      // Получаем данные юзера
+      $user = JFactory::getUser($data->juser_id);
+
       if (!$data->age) {$data->age = 'нет';}
 
       // Формируем URL на полную карточку оператора
-      $url = JRoute::_('?task=view&uid='.$data->id);
+      #$url = JRoute::_('?task=view&uid='.$data->id);
+
+      $url = JRoute::_('view/'.$data->id);  # Ссылка в формате SEF
 
       # Готовим куски HTML кода для вставки в шаблоны
 
@@ -649,20 +675,33 @@ class AdValoremViewAdValorem extends JViewLegacy
 
       // Данные оператора
       $personal = '';
+      $parameters = '';
+
+      # Фамилия
+      $personal .= '<div class="row">';
 
       if (isset($edit)) { $personal .= '<span class="pull-right glyphicon glyphicon-pencil"></span>'; }
 
       if ( mb_strlen($data->sirname, 'utf-8') > 17 ) {  //mb_strlen($str, utf-8) Просто strlen в кодировке utf8 для кириллицы удваивает результат
-        $personal .='<span style="font-size: large">'.$data->sirname.'</span><br>';
-      }
-      else
-      { $personal .='<span style="font-size: x-large">'.$data->sirname.'</span><br>'; }
+        $personal .='<span style="font-size: large">'.$data->sirname.'</span>';
+      } else { $personal .='<span style="font-size: x-large">'.$data->sirname.'</span>'; }
 
+      if ($user->id != 0) { $personal .='<span class="pull-right glyphicon glyphicon-user"></span>'; }
 
+      $personal .= '</div>';
+
+      # Имя отчество
+      $personal .= '<div class="row">';
       $personal .='<p style="font-size: large">'.$data->name.' '.$data->patronymic.'</p>';
-      $personal .='<p>';
+      $personal .= '</div>';
 
-      $personal .='<span class="btn btn-default pull-left">'.JText::_( 'AD_AGE' ).': '.$data->age.'</span>';
+      # ФИО целиком
+      $name = $data->sirname.' '.$data->name.' '.$data->patronymic.'<a class="pull-right glyphicon glyphicon-eye-open" href="'.$url.'"></a>';
+
+      # Параметры
+      $parameters .= '<div class="row">';
+      $parameters .='<p>';
+      $parameters .='<span class="btn btn-default disabled pull-left">'.JText::_( 'AD_AGE' ).': <span class="label label-primary">'.$data->age.'</span></span>';
 
       if ( isset($data->exp) ) {
 
@@ -672,26 +711,34 @@ class AdValoremViewAdValorem extends JViewLegacy
         $years = $interval->format('%y');
         $months = $interval->format('%m');
 
-        $personal .= '<span class="btn btn-default pull-left">'.'Cтаж: '.$years.' '.$model->YearTextArg($years).'</span>';
+        $parameters .= '<span class="btn btn-default disabled pull-left">'
+                  .'Cтаж: <span class="label label-primary">'.$years.' '.$model->YearTextArg($years).'</span></span>';
       }
 
       if ($data->price) {
-        $personal .='<span class="btn btn-default pull-right">'.'Оплата: '.$data->price.' '.JText::_( 'AD_RUBLES' ).'</span>';
+        $parameters .='<span class="btn btn-default disabled pull-left">'
+                  .'Оплата: <span class="label label-primary">'.$data->price.' '.JText::_( 'AD_RUBLES' ).'</span></span>';
       }
 
-      $personal .='<p>';
+      $parameters .='</p>';
+      $parameters .='</div>';
 
       // Описание
-      if ( strlen($data->description) > 255 )
+        $description = '<div class="row">';
+
+      if ( strlen($data->description) > 200 )
       {
-        $description = '<p>'.substr($data->description, 0, 255).' ';
+        $description .= '<p>'.substr($data->description, 0, 200).' ';
         $description .= '<a data-toggle="tooltip" data-placement="bottom" title="'.$data->description.'">'.JText::_('AD_GET_MORE_INFO').'</a>';
         $description .= '</p>';
       }
       else
       {
-        $description = '<p>'.$data->description.'</p>';
+        $description .= '<p>'.$data->description.'</p>';
       }
+      #$description .= '<a href="'.$url.'" >'.JText::_('AD_DETAIL').'</a>';
+
+      $description .= '</div>';
 
       // Тэги
       #$tags = $this->viewTags('');
@@ -707,18 +754,20 @@ class AdValoremViewAdValorem extends JViewLegacy
           <!-- Верхняя часть -->
           <div class="row">
             <div class="col-md-2 col-sm-3 col-xs-12"><?= $photo ?></div>
-            <div class="col-md-6 col-sm-9 col-xs-12"><?= $personal ?></div>
+            <div class="col-md-6 col-sm-9 col-xs-12"><?= $personal.$parameters ?></div>
             <div class="col-md-4 col-sm-6 col-xs-12"><?= $description ?></div>
           </div>
 
           <!--<hr style="margin-top: 5px; margin-bottom: 5px;">-->
 
+          <? if ($tags) { ?>
           <!-- Нижняя часть  -->
           <div class="row">
             <div class="col-md-12">
               <p><?= $tags ?></p>
             </div>
           </div>
+          <? } ?>
 
           <hr>
 
@@ -726,6 +775,36 @@ class AdValoremViewAdValorem extends JViewLegacy
         <?
       break;
 
+      //
+      case '2-10-6-4':
+      // Формируем HTML код одной мини-карточки в формате 2-6-4 (для 3/4 компонента). Вариант 2 (панель с заголовком)
+        ?>
+
+        <div class="panel panel-primary">
+          <div class="panel-heading">
+            <h3 class="panel-title"><?= $name ?></h3>
+          </div>
+          <div class="panel-body">
+            <div class="row">
+              <div class="col-md-2 col-sm-3 col-xs-12"><?= $photo ?></div>
+              <div class="col-md-6 col-sm-9 col-xs-12">
+                <div class="row">
+                  <div class="col-md-12 col-sm-12 col-xs-12"><?= $parameters ?></div>
+                </div>
+                <div class="row">
+                  <div class="col-md-7 col-sm-7 col-xs-12"></div>
+                  <div class="col-md-5 col-sm-5 col-xs-12"></div>
+                </div>
+              </div>
+              <div class="col-md-4 col-sm-9 col-xs-12"><?= $description ?></div>
+            </div>
+          </div>
+        </div>
+
+        <?
+      break;
+
+      //
       case '3-9':
       // Формируем HTML код одной мини-карточки в формате 3-6 (для 1/2 компонента)
         ?>
@@ -734,7 +813,7 @@ class AdValoremViewAdValorem extends JViewLegacy
           <!-- Верхняя часть -->
           <div class="row">
             <div class="col-md-3"><?= $photo ?></div>
-            <div class="col-md-9"><?= $personal ?></div>
+            <div class="col-md-9"><?= $personal.$parameters ?></div>
           </div>
           <hr style="margin-top: 5px; margin-bottom: 5px;">
 
@@ -795,12 +874,17 @@ class AdValoremViewAdValorem extends JViewLegacy
         $data = $model->getOperatorMiniCardByID();
 
         ?>
+
+        <? if ($data->desc_full) { ?>
+
         <ul class="list-group">
           <li class="list-group-item">
             <div class="row">
-              <div class="col-md-12"><?= $data->desc_full ?></div>
+              <div class="col-md-12"><?= nl2br($data->desc_full) ?></div>
             </div>
           </li>
+
+        <? } ?>
 
           <? if ($data->desc_consult) { ?>
 
@@ -808,12 +892,12 @@ class AdValoremViewAdValorem extends JViewLegacy
             <div class="row">
               <div class="col-md-12">
                 <h4><?= JText::_( 'AD_DESCC' ); ?></h4>
-                <?= $data->desc_consult ?>
+                <?= nl2br($data->desc_consult) ?>
               </div>
             </div>
           </li>
 
-          <? } ?>
+          <? } else echo(JText::_( 'AD_SEARCH_EMPTY' )); ?>
 
         </ul>
 
@@ -830,9 +914,19 @@ class AdValoremViewAdValorem extends JViewLegacy
         $data = $model->getOperatorMiniCardByID();
 
         ?>
-          <table class="table">
-          <tr><td><?= $data->education ?></td></tr>
-          </table>
+
+        <? if ($data->education) { ?>
+
+        <ul class="list-group">
+          <li class="list-group-item">
+            <div class="row">
+              <div class="col-md-12"><?= nl2br($data->education) ?></div>
+            </div>
+          </li>
+        </ul>
+
+        <? } else echo(JText::_( 'AD_SEARCH_EMPTY' )); ?>
+
         <?
     }
 
@@ -863,18 +957,27 @@ class AdValoremViewAdValorem extends JViewLegacy
             default:      $glyphicon = 'glyphicon glyphicon-adjust'; $tdclass = '';
           }
 
+          // Если комментарий от пользователя - выводим ссылку на карточку
+          if ($comment->uid_from)
+          {
+            $name_from = '<a href="'.JRoute::_('?task=view&uid='.$comment->uid_from).'">'.$comment->name_from.'</a>' ;
+          }
+          else { $name_from = $comment->name_from; }
+
           // Выводим строку таблицы
           ?>
-          <tr><td class="<?= $tdclass ?> strong">
+          <tr>
+          <td class="<?= $tdclass ?> strong">
             <div class="row">
               <div class="col-md-1"><span class="<?= $glyphicon ?>"></span></div>
-              <div class="col-md-6"><strong><?= $comment->name_from; ?></strong></div>
+              <div class="col-md-6"><strong><?= $name_from ?></strong></div>
               <div class="col-md-5"><span class="pull-right"><?= $comment->date; ?></span></div>
             </div>
             <div class="row">
-              <div class="col-md-12"><?= $comment->text; ?></div>
+              <div class="col-md-12"><?= nl2br($comment->text); ?></div>
             </div>
-          </td></tr>
+          </td>
+          </tr>
           <?
           }
 
@@ -911,22 +1014,29 @@ class AdValoremViewAdValorem extends JViewLegacy
 
                 <!-- Основные поля -->
                 <!-- ----------------------------------------------------------------- -->
+
+                <!-- Имя -->
                 <div class="form-group">
-                    <div class="col-sm-12">
+                    <div class="col-sm-6">
                       <input name="name_from" type="text" size="40" class="form-control" placeholder="Ваше имя *" value="">
+                    </div>
+                    <div class="col-sm-6">
+                      <input name="contact" type="text" size="40" class="form-control" placeholder="Контакт" value=""
+                             data-toggle="tooltip" data-placement="top" title="<?= JText::_( 'AD_HINT_COMMENT_CONTACT' ) ?>">
                     </div>
                 </div>
 
+                <!-- Положительный/Отрицательный -->
                 <div class="form-group">
                     <div class="col-sm-12">
 
                     <div class="btn-group" data-toggle="buttons">
 
                       <label class="btn btn-default btn-sm " > <!-- onChange="this.form.submit()" убрал автосабмит -->
-                        <input type="radio" name="commtype" value="GOOD" ><span class="glyphicon glyphicon-ok"></span>
+                        <input type="radio" name="commtype" value="GOOD" ><span class="glyphicon glyphicon-ok text-success"></span>
                       </label>
                       <label class="btn btn-default btn-sm " >
-                        <input type="radio" name="commtype" value="BAD" ><span class="glyphicon glyphicon-remove"></span>
+                        <input type="radio" name="commtype" value="BAD" ><span class="glyphicon glyphicon-remove text-danger"></span>
                       </label>
 
                     </div>
@@ -934,7 +1044,7 @@ class AdValoremViewAdValorem extends JViewLegacy
                     </div>
                 </div>
 
-
+                <!-- Отзыв -->
                 <div class="form-group">
                     <div class="col-sm-12">
                       <textarea  data-toggle="tooltip" data-placement="top" title="<?= JText::_( 'AD_HINT_COMMENT_TEXT' ) ?>"
@@ -1037,7 +1147,9 @@ class AdValoremViewAdValorem extends JViewLegacy
                 <div class="form-group ">
                     <div class="col-sm-12">
                       <input data-toggle="tooltip" data-placement="top" title="<?= JText::_( 'AD_HINT_BIRTH_DATE' ) ?>"
-                             name="birth_date" type="text" class="form-control" value="<?= $data->birth_date ?>" placeholder="Дата рождения" data-provide="datepicker">
+                             name="birth_date" type="text" pattern="^[0-9]{2}\.[0-9]{2}\.[0-9]{4}" class="form-control"
+                             value="<?= $data->birth_date ?>" placeholder="Дата рождения (дд.мм.гггг)"
+                             data-provide="datepicker">
                     </div>
                 </div>
 
@@ -1146,13 +1258,12 @@ class AdValoremViewAdValorem extends JViewLegacy
                     </div>
                 </div>
 
-                <h3><?= JText::_( 'AD_HEAD_EDUCATION' ); ?></h3>
-
                 <!-- Образование. Пока в виде одного поля. Табличку и связь с реестрами сделаю потом -->
                 <div class="form-group">
                     <div class="col-sm-12">
+                      <label><?= JText::_( 'AD_HEAD_EDUCATION' ) ?></label>
                       <textarea  data-toggle="tooltip" data-placement="top" title="<?= JText::_( 'AD_HINT_EDUCATION' ) ?>"
-                                name="education" size="3000" class="form-control" rows = 2><?= $data->education ?></textarea>
+                                name="education" size="3000" class="form-control" rows =5><?= $data->education ?></textarea>
                     </div>
                 </div>
 
@@ -1171,6 +1282,19 @@ class AdValoremViewAdValorem extends JViewLegacy
                       </div>
                     </div>
                 </div>
+
+                <hr>
+
+                <!-- Нижняя кнопка "Сохранить" -->
+                <div class="form-group">
+                    <div class="col-sm-12">
+                        <button type="submit" class="pull-left btn btn-primary">
+                        <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+                        <?= JText::_( 'AD_SAVE' ); ?>
+                        </button>
+                    </div>
+                </div>
+
 
             </div>
 

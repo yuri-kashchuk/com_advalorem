@@ -39,6 +39,7 @@ class AdValoremController extends JControllerLegacy
         $model->category = 'search';
 
         // Определяем город из сессии или из запроса
+
         if ( JRequest::getVar('city') ) {
             $model->city = JRequest::getVar('city'); }
         elseif ( $session->get('city') ) {
@@ -56,7 +57,7 @@ class AdValoremController extends JControllerLegacy
 
     }
 
-    // Отоюражение списка стран и городов
+    // Отображение списка стран и городов
     function cities()
     {
         // Получаем представление
@@ -181,7 +182,7 @@ class AdValoremController extends JControllerLegacy
                    }
                    else
                    {
-                      JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ) );
+                      JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ), 'error' );
                       return;
                    }
               }
@@ -191,7 +192,7 @@ class AdValoremController extends JControllerLegacy
         elseif ( !$model->getOperatorMiniCardByID() )
         {
           // Проверяем наличие оператора по UID (uid определяется в процедуре модели)
-          JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ) );
+          JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ), 'error' );
           return;
         }
 
@@ -214,13 +215,13 @@ class AdValoremController extends JControllerLegacy
 
         if ( !$model->checkOperatorEdit() )
         {
-            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ) ); return;
+            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ), 'error' ); return;
         }
 
         // Проверяем существование оператора по UID
         if ( !$model->getOperatorMiniCardByID() )
         {
-            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ) );
+            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ), 'error' );
             return;
         }
 
@@ -246,14 +247,17 @@ class AdValoremController extends JControllerLegacy
 
         if ( !$model->checkOperatorEdit() )
         {
-            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ) ); return;
+            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ), 'error' ); return;
         }
 
         // Проверяем существование оператора по UID
-        if ( !$model->getOperatorMiniCardByID() )
+
+        # Выбираем текущие данные клиента
+        $currentData = $model->getOperatorMiniCardByID();
+
+        if ( !$currentData )
         {
-            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ) );
-            return;
+            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ), 'error' ); return;
         }
 
         // Контейнер для параметров апдейта
@@ -269,27 +273,27 @@ class AdValoremController extends JControllerLegacy
         // Данные клиента
             if ( JRequest::getString('sirname') )
             {
-                $object->sirname = JRequest::getString('sirname');
+                $object->sirname = trim(JRequest::getString('sirname'));
             }
-            if ( JRequest::getString('name') ) { $object->name = JRequest::getString('name'); }
-            if ( JRequest::getString('patronymic') ) { $object->patronymic = JRequest::getString('patronymic'); }
+            if ( JRequest::getString('name') ) { $object->name = trim(JRequest::getString('name')); }
+            if ( JRequest::getString('patronymic') ) { $object->patronymic = trim(JRequest::getString('patronymic')); }
 
-            if ( JRequest::getString('gender') ) { $object->gender = JRequest::getString('gender'); }
+            if ( JRequest::getString('gender') ) { $object->gender = trim(JRequest::getString('gender')); }
 
             // Дата рождения
-            if ( $date = JRequest::getString('birth_date') )
+            if ( $date = trim(JRequest::getString('birth_date')) )
             {
                 if ($model->checkDate($date)) {
 
                     $object->birth_date = $model->checkDate($date);
                 }
                 else {
-                    JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_BIRTHDATE' ).': '.$date );
+                    JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_BIRTHDATE' ).': '.$date, 'error' );
                 }
             }
 
             if ( JRequest::getInt('price') ) { $object->price = JRequest::getInt('price');  }
-            if ( JRequest::getString('description') ) { $object->description = JRequest::getString('description'); }
+            if ( JRequest::getString('description') ) { $object->description = substr(trim(JRequest::getString('description')), 0, 254); }
 
             // Контакты
             if ( JRequest::getString('phone') )
@@ -303,11 +307,11 @@ class AdValoremController extends JControllerLegacy
 
             // Обрабатываем адрес
 
-              if ( JRequest::getString('country') ) { $address->country = JRequest::getString('country');  }
-              if ( JRequest::getString('region') ) { $address->region = JRequest::getString('region');  }
-              if ( JRequest::getString('city') ) { $address->city = JRequest::getString('city'); }
-              if ( JRequest::getString('address') ) { $address->address = JRequest::getString('address');  }
-              if ( JRequest::getString('gps') ) { $address->gps = JRequest::getString('gps');  }
+              if ( JRequest::getString('country') ) { $address->country = trim(JRequest::getString('country'));  }
+              if ( JRequest::getString('region') ) { $address->region = trim(JRequest::getString('region'));  }
+              if ( JRequest::getString('city') ) { $address->city = trim(JRequest::getString('city')); }
+              if ( JRequest::getString('address') ) { $address->address = trim(JRequest::getString('address'));  }
+              if ( JRequest::getString('gps') ) { $address->gps = trim(JRequest::getString('gps'));  }
 
               $address->client = $this->input->getInt('uid');
 
@@ -318,18 +322,20 @@ class AdValoremController extends JControllerLegacy
             if ( JRequest::getString('descc') ) { $object->desc_consult = JRequest::getString('descc'); }
 
             // Опыт работы
-            if ( $date = JRequest::getString('exp') )
+            if ( $date = trim(JRequest::getString('exp')) )
             {
                 if ($model->checkDate($date)) {
 
                     $object->exp = $model->checkDate($date);
                 }
                 else {
-                    JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_EXP' ).': '.$date );
+                    JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_EXP' ).': '.$date, 'error' );
                 }
             }
 
             if ( JRequest::getString('education') ) { $object->education = JRequest::getString('education'); }
+
+            // ------- -----------------------------
 
             // Получаем фотографию из запроса. Запрос нужно отправлять обязательно в POST (через GET файл не загружается)
             $file = $this->input->files->get('photo', 'Нет файла', 'array');
@@ -343,7 +349,7 @@ class AdValoremController extends JControllerLegacy
             {
               if ( $file['error'] == '0' ) {
 
-                if ( $file['size'] < 1500000 ) {
+                if ( $file['size'] < JText::_( 'AD_OPERATOR_PHOTO_SIZE' ) ) {
                     // Обрабатываем файл и пишем имя файла в базу
                     $object->photo = $model->operatorPhoto($file);
                 }
@@ -361,7 +367,7 @@ class AdValoremController extends JControllerLegacy
         // Обновляем данные оператора, если все проверки прошли
         if ( $model->operatorUpdate( $object ) )
         {
-            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_DATA_UPDATED' ) );
+            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_DATA_UPDATED' ), 'notice' );
         }
 
         // Если у клиента еще нет адреса - добавляем
@@ -378,6 +384,20 @@ class AdValoremController extends JControllerLegacy
         $object->completeness = $model->getOperatorCompleteness( $model->getOperatorMiniCardByID( $object->id ) );
         $model->operatorUpdate( $object );
 
+        // Пишем запись в историю, если менялась Фамилия или Имя (пока для теста)
+        if ($currentData->sirname != $object->sirname or $currentData->name != $object->name)
+        {
+        $history = new stdClass();
+
+        $history->event = 'CLIENT_SAVE';
+        $history->entity = 'CLIENT';
+        $history->entity_id = $object->id;
+        $history->value = $object->sirname.' '.$object->name;
+        $history->uid = $object->id;
+        $history->event_text = 'Оператор сменил фамилию имя с '.$currentData->sirname.' '.$currentData->name.' на '.$object->sirname.' '.$object->name;
+
+        $model->historyInsert( $history );
+        }
 
         # Отображаем view с шаблоном карточки оператора
         $view->display('operator');
@@ -396,49 +416,70 @@ class AdValoremController extends JControllerLegacy
         // Контейнер для параметров апдейта
             $comment = new stdClass();
 
-        /*
-            Проверяем корректность новых данных и заполняем массив для вставки
-        */
-
         // Проверяем существование оператора по UID - uid из контекста
         if ( !$model->getOperatorMiniCardByID() )
         {
-            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ) );
+            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ), 'error' );
             return;
         }
 
             $comment->uid = $this->input->getInt('uid');
 
+            # Имя комментатора
             if ( $this->input->getString('name_from') )
             {
               $comment->name_from = $this->input->getString('name_from');
             }
             else
             {
-              JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_NAME_FROM' ) );
+              //JError::raiseError( 4711, JText::_( 'AD_INCORRECT_NAME_FROM' ) );
+              JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_NAME_FROM' ), 'error' );
+              $this->view();
+              return;
             }
 
+            # Текст комментария
             if ( $this->input->getString('text') )
             {
               $comment->text = $this->input->getString('text');
             }
             else
             {
-              JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_COMMENT_TEXT' ) );
+              JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_COMMENT_TEXT' ), 'error' );
+              $this->view();
+              return;
             }
 
+            # Тип комментария
             if ( $this->input->getString('commtype') )
             {
               $comment->commtype = $this->input->getString('commtype');
             }
             else { $comment->commtype = 'NORM'; }
 
+            # Статус комментария
             $comment->status = 'NEW';
 
-        // Вставляем комментарий
+            # Контакт комментатора
+            $comment->contact = $this->input->getString('contact');
+
+            # Если есть пользователь - пишем его как комментатора
+            $user = JFactory::getUser();
+
+            if ( !$user->guest )
+            {
+              # Сохраняем uid связанного с пользовтаелем оператора
+              $spec = $model->getOperatorMiniCardByUserID($user->id);
+              $comment->uid_from = $spec->id;
+              # Имя комментатора меняем на имя пользователя
+              $comment->name_from = $spec->sirname.' '.$spec->name;
+            }
+
+
+        // Вставляем комментарий в БД
         if ( !$model->commentInsert( $comment ) )
         {
-            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_COMMENT' ) );
+            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_COMMENT' ), 'error' );
         }
 
         # Отображаем view с шаблоном карточки оператора
@@ -446,7 +487,17 @@ class AdValoremController extends JControllerLegacy
     }
 
 
-    // Блокировка специалиста, загруженного из реестра
+    // Обработка ситуации совпадения пользователя с ранее загрущенным специалистом.
+    /*
+        Выполняется только один раз при создании нового пользователя
+        В случае совпадения пользователя по Ф и И с операторами без пользователей (т.е. загруженных из реестра),
+        пользователь может выбрать для одного из найденных операторов:
+            - «Это я» – меняем у выбранного UID пользователя на текущего, удаляем текущего (нового), пишем в историю.
+            - «Это НЕ я» – пишем выбор в историю, переходим к редактированию нового оператора
+        При наличии факты выбора в истории - больше не показываем это сообщение.
+     */
+
+    // Выбор "Это я"
     function sign()
     {
         // Получаем представление
@@ -460,7 +511,7 @@ class AdValoremController extends JControllerLegacy
 
         $uidto = $this->input->getInt('uidto');
 
-        // Проверяем существование блокируемого специалиста по UIDTO - строго из URL
+        // Проверяем существование специалиста для связки по UIDTO - строго из URL
         if ( !$uidto )
         {
             JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ) );
@@ -481,11 +532,13 @@ class AdValoremController extends JControllerLegacy
               JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ) ); return;
           }
 
+          # Получаем инфу текущего специалиста
           $spec = $model->getOperatorMiniCardByUserID($user->id);
 
+          # Выбираем похожих
           $similars = $model->getOperatorSimilars( $spec->id );
 
-          # Не имеет права блокировать этого специалиста, т.к. он на него не похож
+          # Не имеет права связаться с этим специалистом, если переданный Uid не присутствует в выборке похожих
           $grant = false;
 
           foreach ($similars as $similar)
@@ -498,13 +551,26 @@ class AdValoremController extends JControllerLegacy
               JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ) ); return;
           }
 
-        // Контейнер для параметров апдейта
+        // Блокируем текущего специалиста
         $object = new stdClass();
 
         $object->id = $uidto;
         $object->blocked = 1;
 
         $model->operatorUpdate( $object );
+
+        //JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ) );
+
+        // Пишем запись в историю
+        $history = new stdClass();
+
+        $history->event = 'CLIENT_BLOCK';
+        $history->entity = 'CLIENT';
+        $history->entity_id = $object->id;
+        $history->value = $object->blocked;
+        $history->uid = $spec->id;
+
+        $model->historyInsert( $history );
 
         # Отображаем view с шаблоном карточки оператора
         $view->display('edit');

@@ -1,6 +1,17 @@
 <?php
   // Запрет прямого доступа.
   defined('_JEXEC') or die;
+
+  $model = $this->getModel();
+?>
+
+<?php
+    // Устанавливаем заголовок для страницы
+        $operator = $model->getOperatorMiniCardByID();
+        $title = $operator->sirname.' '.$operator->name;
+
+        $document =& JFactory::getDocument();
+        $document->setTitle($title);
 ?>
 
 <!-- Шаблон формы редактирования оператора -->
@@ -33,11 +44,29 @@
 
     <hr>
 
-    <!-- Строка со списком похожих операторов -->
+    <!--
+        Строка со списком похожих операторов без пользователей для блокировки
+
+        По идее он должен быть только один (или ни одного), т.к. при загрузке я должен учитывать дубли.
+        Но теоретически может быть и несколько.
+
+        Если они есть - показываем список блок со списком и выключаем основную форму
+    -->
+
+    <?
+        if ( $model->getOperatorSimilars() ) {
+    ?>
+
+
     <div class="row">
 
       <div class="col-md-12">
-
+            <!-- Сообщение -->
+            <div class="alert alert-danger" role="alert">
+              <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+              <span class="sr-only">Error:</span>
+            <?= JText::_( 'AD_SIGN_MSG' ); ?>
+            </div>
             <!-- Вывод списка -->
             <?= $this->viewOperatorSimilarsList() ?>
 
@@ -45,8 +74,9 @@
 
     </div>
 
+    <? } else { ?>
 
-    <!-- Строка с формой -->
+    <!-- Строка с формой редактирования -->
     <div class="row">
 
       <div class="col-md-12">
@@ -66,4 +96,7 @@
 
       </div>
     </div>
+
+    <? } ?>
+
 </div>

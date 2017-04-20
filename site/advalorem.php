@@ -16,7 +16,7 @@ JError::$legacy = false;
 // Подключаем библиотеку контроллера Joomla.
 jimport('joomla.application.component.controller');
 
-// Получаем экземпляр контроллера с префиксом HelloWorld.
+// Получаем экземпляр контроллера с префиксом
 $controller = JControllerLegacy::getInstance('AdValorem');
 
 // Исполняем задачу task из Запроса.
