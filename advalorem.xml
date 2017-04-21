@@ -1,18 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<extension type="component" version="3.3.3" method="upgrade">
+<extension type="component" version="3.6.5" method="install">
 
-	<name>Ad Valorem</name>
+	<name>advalorem</name>
 	<!-- Следующие элементы необязательны -->
-	<creationDate>Октябрь 2014</creationDate>
+	<creationDate>20 апреля 2017</creationDate>
 	<author>Кащук Юрий</author>
 	<authorEmail>yuri.kashchuk@gmail.com</authorEmail>
 	<authorUrl></authorUrl>
 	<copyright></copyright>
 	<license></license>
 	<!--  Версия записывается в таблицу компонентов -->
-	<version>0.0.2</version>
+	<version>1.0.0</version>
 	<!-- Описание необязательно -->
-	<description>Каталог специалистов</description>
+	<description>Каталог остеопатов</description>
+
+    <!-- Запускается при установке -->
+    <install>
+    	<sql>
+    		<file driver="mysql" charset="utf8">sql/install/advalorem.sql</file>
+    	</sql>
+    </install>
 
 	<!-- Запускается при обновлении -->
 	<update>
@@ -25,17 +32,20 @@
 	<!-- Обратите внимание на значение аттрибута folder: Этот аттрибут описывает папку нашего пакета-установщика из которой должны копироваться файлы.
 	Поэтому указанные в этом разделе файлы будут скопированы из папки /site/ нашего пакета-установщика в соответствующую папку установки. -->
 	<files folder="site">
+        <folder>images</folder>
+        <folder>language</folder>
+		<folder>models</folder>
+		<folder>views</folder>
 		<filename>index.html</filename>
 		<filename>controller.php</filename>
 		<filename>advalorem.php</filename>
-		<folder>models</folder>
-		<folder>views</folder>
+        <filename>router.php</filename>
 	</files>
 
 	<!-- Администрирование -->
 	<administration>
 		<!-- Раздел Меню -->
-		<menu>Ad Valorem</menu>
+		<menu>advalorem</menu>
 		<!-- Раздел основных файлов администрирования  -->
 		<!-- Обратите внимание на значение аттрибута folder: Этот аттрибут описывает папку нашего пакета-установщика из которой должны копироваться файлы. 
 		Поэтому указанные в этом разделе файлы будут скопированы из папки /admin/ нашего пакета-установщика в соответствующую папку установки. -->
