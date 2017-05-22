@@ -8,6 +8,8 @@
 <!-- Шаблон для вывода результатов поиска -->
 <div class="container">
 
+  <h3 class="page-header">Результаты поиска</h3>
+
   <div class="row">
 
       <div class="col-md-9">

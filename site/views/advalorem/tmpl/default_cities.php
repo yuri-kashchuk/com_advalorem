@@ -1,6 +1,9 @@
 <?php
   // Запрет прямого доступа.
   defined('_JEXEC') or die;
+
+  $model = $this->getModel();
+
 ?>
 
 <!-- Шаблон вывода списка городов для выбора -->
@@ -28,6 +31,15 @@
 
             <div class="col-md-12">
                 <?php echo $this->viewCountyCity(); ?>
+
+                <?
+                /* Загрузка реестра остеорег
+                ТЕСТ
+
+                $model->downloadOsteoreg();
+                */ 
+                ?>
+
             </div>
 
     </div>

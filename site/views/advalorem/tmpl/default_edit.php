@@ -50,31 +50,26 @@
         По идее он должен быть только один (или ни одного), т.к. при загрузке я должен учитывать дубли.
         Но теоретически может быть и несколько.
 
-        Если они есть - показываем список блок со списком и выключаем основную форму
+        Если они есть - показываем блок со списком. Основную форму не выключаем
+        Оставляем решение о блокировке совпаденцев на выбор пользователя
     -->
 
     <?
         if ( $model->getOperatorSimilars() ) {
     ?>
 
-
     <div class="row">
 
       <div class="col-md-12">
-            <!-- Сообщение -->
-            <div class="alert alert-danger" role="alert">
-              <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
-              <span class="sr-only">Error:</span>
-            <?= JText::_( 'AD_SIGN_MSG' ); ?>
-            </div>
+
             <!-- Вывод списка -->
-            <?= $this->viewOperatorSimilarsList() ?>
+            <?= $this->viewOperatorSimilarsList($operator->id) ?>
 
       </div>
 
     </div>
 
-    <? } else { ?>
+    <? } ?>
 
     <!-- Строка с формой редактирования -->
     <div class="row">
@@ -96,7 +91,5 @@
 
       </div>
     </div>
-
-    <? } ?>
 
 </div>

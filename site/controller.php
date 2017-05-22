@@ -176,6 +176,7 @@ class AdValoremController extends JControllerLegacy
               {
                 // Если не нашли
                 // Вставляем нового оператора по данным пользователя
+                /*
                    if ( $uid = $model->operatorInsertByUser( $user ) )
                    {
                         $session->set('uid', $uid);
@@ -185,6 +186,8 @@ class AdValoremController extends JControllerLegacy
                       JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ), 'error' );
                       return;
                    }
+                */
+
               }
           }
 
@@ -301,6 +304,9 @@ class AdValoremController extends JControllerLegacy
                 // Удаляем лишние символы из номера телефона
                 $vowels = array("(", ")", " ", "-");
                 $object->phone = str_replace($vowels, "", JRequest::getString('phone'));
+
+                // Проверяем длину и +
+                # ...
             }
 
             if ( JRequest::getString('email') ) { $object->email = JRequest::getString('email'); }
@@ -334,6 +340,9 @@ class AdValoremController extends JControllerLegacy
             }
 
             if ( JRequest::getString('education') ) { $object->education = JRequest::getString('education'); }
+
+            // Ресстр по умолчанию. Пишу, то что получил не проверяя
+            if ( JRequest::getString('list') ) { $object->list = JRequest::getString('list'); }
 
             // ------- -----------------------------
 
@@ -389,8 +398,8 @@ class AdValoremController extends JControllerLegacy
         {
         $history = new stdClass();
 
-        $history->event = 'CLIENT_SAVE';
-        $history->entity = 'CLIENT';
+        $history->event = JText::_( 'AD_EVENT_CLIENT_SAVE' );
+        $history->entity = JText::_( 'AD_ENTITY_CLIENT' );
         $history->entity_id = $object->id;
         $history->value = $object->sirname.' '.$object->name;
         $history->uid = $object->id;
@@ -455,10 +464,10 @@ class AdValoremController extends JControllerLegacy
             {
               $comment->commtype = $this->input->getString('commtype');
             }
-            else { $comment->commtype = 'NORM'; }
+            else { $comment->commtype = JText::_( 'AD_COMMENT_TYPE_NORM' ); }
 
             # Статус комментария
-            $comment->status = 'NEW';
+            $comment->status = JText::_( 'AD_COMMENT_STATUS_NEW' );
 
             # Контакт комментатора
             $comment->contact = $this->input->getString('contact');
@@ -487,18 +496,17 @@ class AdValoremController extends JControllerLegacy
     }
 
 
-    // Обработка ситуации совпадения пользователя с ранее загрущенным специалистом.
+    // Обработка ситуации совпадения пользователя по ФИ с ранее загруженным специалистом из реестра.
     /*
-        Выполняется только один раз при создании нового пользователя
         В случае совпадения пользователя по Ф и И с операторами без пользователей (т.е. загруженных из реестра),
         пользователь может выбрать для одного из найденных операторов:
-            - «Это я» – меняем у выбранного UID пользователя на текущего, удаляем текущего (нового), пишем в историю.
-            - «Это НЕ я» – пишем выбор в историю, переходим к редактированию нового оператора
-        При наличии факты выбора в истории - больше не показываем это сообщение.
+            - «Это я» – блокируем выбранного UID, пишем в историю. Необходимость объединения данных операторов рассматриваю индивидуально.
+            - «Это НЕ я» – пишем выбор в историю
+        При наличии факта сделанного выбора в истории - больше не показываем это сообщение.
      */
 
-    // Выбор "Это я"
-    function sign()
+    // Выбор "Это я"/ "Это не я" - обрабатывается параметром MODE
+    function block()
     {
         // Получаем представление
         $view = $this->getView();
@@ -507,29 +515,41 @@ class AdValoremController extends JControllerLegacy
         // Устанавливаем модель по умолчанию для представления
         $view->setModel($model, true);
 
+        // Текущий пользователь
         $user = JFactory::getUser();
 
+        // Оператор с которым выполняется действие
         $uidto = $this->input->getInt('uidto');
+
+        $mode = $this->input->getString('mode');
+
+        // Проверяем, что передан корректный MODE
+
+        if ( !$mode )
+        {
+            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ), 'error' );
+            return;
+        }
 
         // Проверяем существование специалиста для связки по UIDTO - строго из URL
         if ( !$uidto )
         {
-            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ) );
+            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ), 'error' );
             return;
         }
 
         if ( !$model->getOperatorMiniCardByID( $uidto ) )
         {
-            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ) );
+            JFactory::getApplication()->enqueueMessage( JText::_( 'AD_INCORRECT_UID' ), 'error' );
             return;
         }
 
-        // Проверяем право пользователя на блокировку
+        // Проверяем право пользователя на выполнение действия
 
           # Не залогинился
           if ( $user->guest )
           {
-              JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ) ); return;
+              JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ), 'error' ); return;
           }
 
           # Получаем инфу текущего специалиста
@@ -548,34 +568,53 @@ class AdValoremController extends JControllerLegacy
 
           if ( $grant != true )
           {
-              JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ) ); return;
+              JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ), 'error' ); return;
           }
 
-        // Блокируем текущего специалиста
-        $object = new stdClass();
+        /* Выполнение действий */
 
-        $object->id = $uidto;
-        $object->blocked = 1;
+        # Нет, это НЕ я!
+        if ( $mode == '2' ) {
 
-        $model->operatorUpdate( $object );
+          // Пишем запись в историю
+          $history = new stdClass();
 
-        //JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ) );
+          $history->event = JText::_( 'AD_EVENT_CLIENT_SKIP' );
+          $history->entity = JText::_( 'AD_ENTITY_CLIENT' );
+          $history->entity_id = $uidto;
+          $history->uid = $spec->id;
 
-        // Пишем запись в историю
-        $history = new stdClass();
+          $model->historyInsert( $history );
 
-        $history->event = 'CLIENT_BLOCK';
-        $history->entity = 'CLIENT';
-        $history->entity_id = $object->id;
-        $history->value = $object->blocked;
-        $history->uid = $spec->id;
+        }
+        # Да, это я!
+        elseif ( $mode == '1' ) {
 
-        $model->historyInsert( $history );
+          // Блокируем переданного оператора
+          $object = new stdClass();
+
+          $object->id = $uidto;
+          $object->blocked = 1;
+
+          $model->operatorUpdate( $object );
+
+          // Пишем запись в историю
+          $history = new stdClass();
+
+          $history->event = JText::_( 'AD_EVENT_CLIENT_BLOCK' );
+          $history->entity = JText::_( 'AD_ENTITY_CLIENT' );
+          $history->entity_id = $object->id;
+          $history->value = $object->blocked;
+          $history->uid = $spec->id;
+
+          $model->historyInsert( $history );
+
+        }
+        else { JFactory::getApplication()->enqueueMessage( JText::_( 'AD_MSG_ACCESS_DENIED' ), 'error' ); return; }
 
         # Отображаем view с шаблоном карточки оператора
         $view->display('edit');
     }
-
 
 }
 ?>

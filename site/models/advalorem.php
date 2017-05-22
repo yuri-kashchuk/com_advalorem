@@ -5,6 +5,10 @@ defined('_JEXEC') or die;
 // Подключаем библиотеку modelitem Joomla.
 jimport('joomla.application.component.modelitem');
 
+  // load own libs
+  $path = dirname(__FILE__);
+  require_once $path . '/class.mobiledetect.php';
+
 // Модель по умолчанию. Используется для выборки данных при формировании контента
 // Методы работы с сущностями располагаются в соответствующих моделях.
 
@@ -25,6 +29,11 @@ class AdValoremModelAdValorem extends JModelItem
         Ссылки на страницы компонента
     */
 
+    public function getMobile()
+    {
+        return new JMobileDetect();
+    }
+
     // ССылка на форму редактирования специалиста
     public function getEditLink()
     {
@@ -33,7 +42,7 @@ class AdValoremModelAdValorem extends JModelItem
         $uid = JRequest::getInt('uid');
         if (!$uid) { $uid = $session->get('uid'); }
 
-        return JRoute::_( '&task=edit&uid='.$uid );
+        return JRoute::_( '?task=edit&uid='.$uid );
     }
 
     // ССылка на форму карточки специалиста
@@ -48,17 +57,6 @@ class AdValoremModelAdValorem extends JModelItem
         return JRoute::_( '&task=view&uid='.$uid );
     }
 
-    // Ссылка на привязку к записи реестра (по сути - ее удаление)
-    public function getSignLink($uidto)
-    {
-        $session = &JFactory::getSession();
-
-        $uid = JRequest::getInt('uid');
-        if (!$uid) { $uid = $session->get('uid'); }
-
-        return JRoute::_( '&task=sign&uidto='.$uidto );
-    }
-
     // ССылка на результаты поиска
     public function getSearchLink()
     {
@@ -68,7 +66,7 @@ class AdValoremModelAdValorem extends JModelItem
     // Ссылка на форму выбора города
     public function getCitiesLink()
     {
-        return JRoute::_( '&task=cities' );
+        return JRoute::_( '?task=cities' );
     }
 
     // Получаем список тэгов из БД
@@ -110,7 +108,7 @@ class AdValoremModelAdValorem extends JModelItem
         // Возвращаем одну запись
         $results = $db->loadObject();
 
-        $uid = ++$results->id;
+        if ($results) { $uid = ++$results->id; } else { $uid = 1; }
 
 		return $uid;
     }
@@ -121,7 +119,7 @@ class AdValoremModelAdValorem extends JModelItem
       $db = JFactory::getDbo();
 
       $fields = array('c.id', 'c.juser_id', 'c.sirname', 'c.name', 'c.patronymic', 'c.gender', 'c.email', 'c.phone',
-                        'c.price', 'c.description', 'c.desc_full', 'c.desc_consult', 'c.photo',
+                        'c.price', 'c.description', 'c.desc_full', 'c.desc_consult', 'c.photo', 'c.list',
                         'c.exp', 'a.country', 'a.region', 'a.city', 'a.address', 'a.gps');
       $fields[] = 'education';
 
@@ -178,23 +176,10 @@ class AdValoremModelAdValorem extends JModelItem
         //$query = $db->getQuery(true);
 
         /*  Выбираем данные для вывода мини-карточек в каталоге.
-            Отбираем только специалистов
+            Отбираем только не блокированных специалистов
         */
-
-        // Если в параметрах передана категория поиска, то ищем по категрии
-        //if ( $this->category == 'random' ) { $results = $this->getOperatorMiniCardsRandom(); return $results; }
 
         $query = $this->getOperatorMiniCardsQuery();
-
-
-        // Если категории не передано, то ищем по параметрам
-        /*$query
-            ->select( $this->getOperatorMiniCardFields() )
-            ->from( $db->quoteName('#__ad_client', 'c'))
-            ->join('LEFT', $db->quoteName('#__ad_address', 'a') . ' ON (' . $db->quoteName('c.id') . ' = ' . $db->quoteName('a.client') . ')')
-            ->where( $db->quoteName('c.profile').' = \''.JText::_( 'AD_OPERATOR' ).'\'' )
-            ->where($db->quoteName('c.blocked').' = 0');
-        */
 
         // Отбор по параметрам поиска:
 
@@ -362,7 +347,7 @@ class AdValoremModelAdValorem extends JModelItem
     }
 
 
-    // Получение списка похожих специалистов по Ф,И для блокировки
+    // Получение списка похожих специалистов по Ф,И специалиста для блокировки
     public function getOperatorSimilars($uid = null)
     {
         $session = &JFactory::getSession();
@@ -389,9 +374,48 @@ class AdValoremModelAdValorem extends JModelItem
             ->join('LEFT', $db->quoteName('#__ad_address', 'a') . ' ON (' . $db->quoteName('c.id') . ' = ' . $db->quoteName('a.client') . ')')
             ->where('UPPER('.$db->quoteName('c.sirname').') = UPPER(\''.$current->sirname.'\')')
             ->where('UPPER('.$db->quoteName('c.name').') = UPPER(\''.$current->name.'\')')
-            ->where($db->quoteName('c.juser_id').' = 0') # Еще не ассоциирован с пользователем
-            ->where($db->quoteName('c.blocked').' = 0')  # Еще не заблокирован
+            ->where($db->quoteName('c.juser_id').' is null') # Еще не ассоциирован с пользователем
+            ->where($db->quoteName('c.blocked').' = 0')  # Не заблокирован
+            ->where($db->quoteName('c.profile').' = \''.JText::_( 'AD_OPERATOR' ).'\'' ) # Специалист
             ->where($db->quoteName('c.id').' <> '.$uid)
+            ;
+
+        $db->setQuery($query);
+
+        // Возвращаем записи
+        $results = $db->loadObjectList();
+
+        // Получаем данные skip событий оператора
+        $skip = $this->historyGet( JText::_('AD_EVENT_CLIENT_SKIP') , $uid );
+
+        // Исключаем записи, по которым оператор уже поставил отказ
+        foreach ($results as $i => $result) {
+
+            foreach ($skip as $hist) {
+              if ($hist->entity_id == $result->id) { unset($results[$i]); }
+              }
+        }
+
+		return $results;
+    }
+
+    // Получение списка похожих специалистов по Ф,И специалиста для блокировки
+    public function getOperatorSimilarsByFIO($sirname, $name, $patronymic)
+    {
+        // Инициилизируем запрос
+        $db = JFactory::getDbo();
+
+        $query = $db->getQuery(true);
+
+        //  Выбираем данные операторов по переданным Ф.И.
+        $query
+            ->select($this->getOperatorMiniCardFields())
+            ->from($db->quoteName('#__ad_client', 'c'))
+            ->join('LEFT', $db->quoteName('#__ad_address', 'a') . ' ON (' . $db->quoteName('c.id') . ' = ' . $db->quoteName('a.client') . ')')
+            ->where('UPPER('.$db->quoteName('c.sirname').') = UPPER(\''.$sirname.'\')')
+            ->where('UPPER('.$db->quoteName('c.name').') = UPPER(\''.$name.'\')')
+            ->where('UPPER('.$db->quoteName('c.patronymic').') = UPPER(\''.$patronymic.'\')')
+            ->where($db->quoteName('c.profile').' = \''.JText::_( 'AD_OPERATOR' ).'\'' ) # Специалист
             ;
 
         $db->setQuery($query);
@@ -401,7 +425,6 @@ class AdValoremModelAdValorem extends JModelItem
 
 		return $results;
     }
-
 
     // Получение списка стран и регионов
     public function getCountries()
@@ -431,24 +454,18 @@ class AdValoremModelAdValorem extends JModelItem
 
         $query = $db->getQuery(true);
 
-/*
         $query
-            ->select($db->quoteName('city'))
+            ->select($db->quoteName('a.city').', '.$db->quoteName('a.country').', '.$db->quoteName('a.region').', '.$db->quoteName('a.address') )
             ->select('count(1) vol')
-            ->from($db->quoteName('#__ad_client'))
-            ->where($db->quoteName('profile').' = \''.JText::_( 'AD_OPERATOR' ).'\'' )
-            ->group($db->quoteName('city'))
-            ->order('city');
-*/
+            ->from($db->quoteName('#__ad_address', 'a'))
+            ->join('LEFT', $db->quoteName('#__ad_client', 'c') . ' ON (' . $db->quoteName('a.client') . ' = ' . $db->quoteName('c.id') . ')')
+            ->where($db->quoteName('c.blocked').' = 0')  # Не заблокирован
+            ->where($db->quoteName('c.profile').' = \''.JText::_( 'AD_OPERATOR' ).'\'' ) # Специалист
+            ;
 
         $query
-            ->select($db->quoteName('city').', '.$db->quoteName('country').', '.$db->quoteName('region').', '.$db->quoteName('address') )
-            ->select('count(1) vol')
-            ->from($db->quoteName('#__ad_address'));
-
-        $query
-            ->group($db->quoteName('city'))
-            ->order('city, country, region');
+            ->group($db->quoteName('a.city'))
+            ->order('a.city, a.country, a.region');
 
         $db->setQuery($query);
 
@@ -479,6 +496,30 @@ class AdValoremModelAdValorem extends JModelItem
 		return $results;
     }
 
+    // Получение списка реестров
+    public function getRegList()
+    {
+        $db = JFactory::getDbo();
+
+        $fields = array('id', 'name', 'description', 'url');
+
+        // Квотируем элементы массива
+        $fields = $db->quoteName($fields);
+
+        $query = $db->getQuery(true);
+
+        $query
+            ->select($fields)
+            ->from($db->quoteName('#__ad_lists'))
+            ->order('id');
+
+        $db->setQuery($query);
+
+        $results = $db->loadObjectList();
+
+		return $results;
+    }
+
     /* Блок методов для работы с оператором */
 
     // Расчет балла заполненности
@@ -487,46 +528,67 @@ class AdValoremModelAdValorem extends JModelItem
         $result = 0;
 
         if ( isset($object->birth_date) ) {
-            if ($object->birth_date != '00.00.0000') { $result = $result + 10; }
+            if ($object->birth_date != '00.00.0000') { $result = $result + 25; }
         }
 
-        if ( isset($object->gender) ) { $result = $result + 10; }
+        if ( isset($object->education) ) { $result = $result + 25; }
 
         if ( isset($object->price) ) {
-            if ( $object->price > 0 ) { $result = $result + 30; }
+            if ( $object->price > 0 ) { $result = $result + 50; }
         }
 
-        if ( isset($object->description) ) { $result = $result + 20; }
+        if ( isset($object->description) ) { $result = $result + 5; }
 
-        if ( isset($object->desc_full) ) { $result = $result + 20; }
+        if ( isset($object->desc_full) ) { $result = $result + 5; }
 
-        if ( isset($object->desc_consult) ) { $result = $result + 20; }
+        if ( isset($object->desc_consult) ) { $result = $result + 5; }
 
-        if ( isset($object->phone) ) { $result = $result + 30; }
+        if ( isset($object->phone) ) { $result = $result + 50; }
 
-        if ( isset($object->email) ) { $result = $result + 30; }
+        if ( isset($object->email) ) { $result = $result + 25; }
 
         if ( isset($object->exp) ) {
-            if ($object->exp != '00.00.0000') { $result = $result + 40; }
+            if ($object->exp != '00.00.0000') { $result = $result + 25; }
         }
 
         if ( isset($object->photo) ) { $result = $result + 50; }
 
-        if ( isset($object->country) ) { $result = $result + 20; }
+        if ( isset($object->country) ) { $result = $result + 0; }
 
-        if ( isset($object->city) ) { $result = $result + 30; }
+        if ( isset($object->city) ) { $result = $result + 25; }
 
-        if ( isset($object->address) ) { $result = $result + 50; }
+        if ( isset($object->address) ) { $result = $result + 5; }
 
-        if ( isset($object->gps) ) { $result = $result + 20; }
+        if ( isset($object->gps) ) { $result = $result + 5; }
 
 
         return $result;
     }
 
     // Пакетный расчет заполненности анкет
-    function operatorCompletenessBatch()
+    function getOperatorCompletenessBatch()
     {
+        // Подключение к БД
+        $db = JFactory::getDbo();
+
+        $query = $this->getOperatorMiniCardsQuery();
+
+        // Выполняем запрос
+        $db->setQuery($query, $this->limitStart, $this->limit);
+
+        $results = $db->loadObjectList();
+
+        foreach ($data as $value) {
+
+        $object = new stdClass();
+
+        $object->id = $value->id;
+
+        $object->completeness = $this->getOperatorCompleteness( $object->id );
+
+        $this->operatorUpdate( $object );
+
+        }
 
     }
 
@@ -571,13 +633,59 @@ class AdValoremModelAdValorem extends JModelItem
 
 
     // Изменение данных оператора
-    public function operatorUpdate($object = null)
+    public function operatorUpdate($object)
     {
       // Обновляем запись данными объекта
       $result = JFactory::getDbo()->updateObject('#__ad_client', $object, 'id');
 
       //
       return $result;
+    }
+
+    /*
+        Блок методов работы с историей
+    */
+
+    /*
+        clientCreate - создание клиента (оператора или пациента)
+        clientBlock - блокировка клиента
+
+
+    */
+
+    // Добавление новой записи в историю
+    public function historyInsert( $object )
+    {
+        $result = JFactory::getDbo()->insertObject('#__ad_history', $object);
+
+        return $result;
+    }
+
+    // Получение информации о записях в истории по событию и инициатору
+    public function historyGet( $event, $uid )
+    {
+
+        // Инициилизируем запрос
+        $db = JFactory::getDbo();
+
+        $query = $db->getQuery(true);
+
+        $fields = array('entity', 'entity_id', 'value', 'uid');
+
+        /*  Выбираем данные из истории по входящим параметрам    */
+        $query
+            ->select($fields)
+            ->from($db->quoteName('#__ad_history', 'h'))
+            ->where($db->quoteName('h.event').' = \''.$event.'\'')
+            ->where($db->quoteName('h.uid').' = '.$uid)
+            ;
+
+        $db->setQuery($query);
+
+        // Возвращаем записи
+        $results = $db->loadObjectList();
+
+		return $results;
     }
 
     // Обработка фото
@@ -657,15 +765,15 @@ class AdValoremModelAdValorem extends JModelItem
     // Проверяет дату на соответствие формату dd.mm.yyyy
     function checkDate($date) {
 
-        $date_parts = explode(".", $date);
+        $date_parts = explode("-", $date); // Получаем в формате ГГГГ-ММ-ДД
 
         if ( !array_key_exists(0, $date_parts) ) { return false; }
         if ( !array_key_exists(1, $date_parts) ) { return false; }
         if ( !array_key_exists(2, $date_parts) ) { return false; }
 
-        if ( !checkdate($date_parts[1], $date_parts[0], $date_parts[2]) ) { return false; }
+        if ( !checkdate($date_parts[1], $date_parts[2], $date_parts[0]) ) { return false; }
 
-        return $date_parts[2].'-'.$date_parts[1].'-'.$date_parts[0];
+        return $date;
     }
 
     // Проверяет возможность редактирования специалиста
@@ -842,7 +950,7 @@ class AdValoremModelAdValorem extends JModelItem
 
         foreach ($results as $data) {
 
-            $address->country = 'Россия'; # По умолчанию все в Россию
+            $address->country = JText::_( 'AD_RUSSIA' ); # По умолчанию все в Россию AD_RUSSIA
             $address->city = $data->city;
             $address->client = $data->id;
 
@@ -855,23 +963,98 @@ class AdValoremModelAdValorem extends JModelItem
 		return $results;
     }
 
-    /*
-        Блок методов работы с историей
-    */
+    /* ------------------------------------- */
 
-    /*
-        clientCreate - создание клиента (оператора или пациента)
-        clientBlock - блокировка клиента
+    // Загрузка реестра osteoreg.ru
+    function downloadOsteoreg() {
+
+    $filepath = JPATH_COMPONENT.'/download/'.strtolower( 'osteoreg.csv' );
+
+    // Получает содержимое файла в виде массива. В данном примере мы используем
+    $lines = file($filepath);
+
+    // Осуществим проход массива
+    foreach ($lines as $line_num => $line) {
+
+    # Конвертируем в правильную кодировку
+    $line = iconv("Windows-1251", "UTF-8", $line);
+
+    # Разбираем запись файла в массив полей
+    $row = str_getcsv($line, ';');
+
+        // Проходим по полям записи
+        /*
+        foreach ($row as $key => $value) {
+            # Выводим результаты
+            echo $key.': '.$value.'<br>';
+        }
+        */
+
+        # Проверяем наличие специалиста в реестре по Ф.И., если есть - пропускаем
+        if ( $this->getOperatorSimilarsByFIO($row[0], $row[1], $row[2]) )
+        {
+          echo 'Специалист с таким Ф.И. уже существует: '.$line.'<br>';
+          continue;
+        }
+
+        # Набиваем объект
+        $object = new stdClass();
+
+        if ( $row[0] ) { $object->sirname = trim($row[0]); }
+        if ( $row[1] ) { $object->name = trim($row[1]); }
+        if ( $row[2] ) { $object->patronymic = trim($row[2]); }
+        if ( $row[3] ) { $object->gender = trim($row[3]); }
+        if ( $row[8] )
+        {
+            // Удаляем лишние символы из номера телефона
+            $vowels = array("(", ")", " ", "-");
+            $object->phone = str_replace($vowels, "", $row[8]);
+        }
+        if ( $row[9] ) { $object->email = $row[9]; }
+
+        $object->profile = JText::_( 'AD_OPERATOR' );
+        $object->list = 1;
+
+        $uid = $this->getOperatorNewID();
+
+        # Создаем нового специалиста
+        try {
+
+        $inserted = $this->operatorInsert($object);
+
+        # Создаем адрес
+        $address = new stdClass();
+
+        if ( $row[5] ) { $address->country = trim($row[5]);  }
+        if ( $row[6] ) { $address->region = trim($row[6]);  }
+        if ( $row[7] ) { $address->city = trim($row[7]); }
+
+        $address->client = $uid;
+
+        $this->addressInsert( $address );
+
+        # Пишем в лог
+        $history = new stdClass();
+
+        $history->event = JText::_( 'AD_EVENT_CLIENT_LOAD' );
+        $history->entity = JText::_( 'AD_ENTITY_REGEDIT' );
+        $history->entity_id = 1;
+        $history->uid = $uid;
+        $history->event_text = 'Из реестра школы Смирнова загружен оператор '.$object->sirname.' '.$object->name;
+
+        $this->historyInsert( $history );
+
+        echo 'Загружен специалист ('.$uid.'): '.$line.'<br>';
+
+        } catch (Exception $e) {
+            echo 'При выполнении возникла ошибка: ',  $e->getMessage(), "\n";
+        }
+
+        # Заполняем дату загрузки реестра TODO
+
+    }
 
 
-    */
-
-    // Добавление новой записи в историю
-    public function historyInsert( $object )
-    {
-        $result = JFactory::getDbo()->insertObject('#__ad_history', $object);
-
-        return $result;
     }
 
     /* ------------------------------------- */
